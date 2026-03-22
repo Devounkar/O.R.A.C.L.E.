@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORACLE — Reasoning Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0b0f;
+    --bg2: #0f1117;
+    --bg3: #161820;
+    --bg4: #1c1e28;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8e9f0;
+    --text2: #8e90a0;
+    --text3: #5a5c6e;
+    --accent: #7c6dfa;
+    --accent2: #a08ff5;
+    --teal: #2dd4bf;
+    --coral: #f87171;
+    --amber: #fbbf24;
+    --green: #4ade80;
+    --easy: #4ade80;
+    --medium: #fbbf24;
+    --hard: #f87171;
+    --greedy: #60a5fa;
+    --beam: #a78bfa;
+    --diverse: #f472b6;
+    --font-head: 'Syne', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+    --r: 10px;
+    --r2: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 14px; line-height: 1.6; }
+  body { min-height: 100vh; }
+
+  /* Layout */
+  .app { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+  .sidebar { background: var(--bg2); border-right: 1px solid var(--border); padding: 24px 0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  .main { overflow-x: hidden; }
+
+  /* Sidebar */
+  .logo { padding: 0 24px 28px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+  .logo-mark { font-family: var(--font-head); font-size: 22px; font-weight: 800; letter-spacing: -0.5px; color: var(--text); display: flex; align-items: center; gap: 10px; }
+  .logo-mark .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+  .logo-sub { font-family: var(--font-mono); font-size: 10px; color: var(--text3); letter-spacing: 0.08em; margin-top: 4px; }
+  .nav-section { padding: 12px 24px 6px; font-family: var(--font-mono); font-size: 10px; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 24px; cursor: pointer; color: var(--text2); font-size: 13.5px; font-weight: 400; transition: all 0.15s; border-left: 2px solid transparent; }
+  .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .nav-item.active { color: var(--accent2); border-left-color: var(--accent); background: rgba(124,109,250,0.07); }
+  .nav-icon { width: 16px; height: 16px; opacity: 0.7; }
+  .nav-item.active .nav-icon { opacity: 1; }
+
+  .sidebar-footer { margin-top: auto; padding: 16px 24px; border-top: 1px solid var(--border); }
+  .status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); margin-right: 8px; }
+  .status-dot.offline { background: var(--coral); box-shadow: 0 0 8px var(--coral); }
+  .status-text { font-family: var(--font-mono); font-size: 11px; color: var(--text3); }
+
+  /* Pages */
+  .page { display: none; padding: 36px 40px; }
+  .page.active { display: block; }
+  .page-header { margin-bottom: 32px; }
+  .page-title { font-family: var(--font-head); font-size: 28px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
+  .page-sub { color: var(--text3); font-size: 13px; margin-top: 4px; font-family: var(--font-mono); }
+
+  /* Cards */
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r2); padding: 20px; }
+  .card-title { font-family: var(--font-mono); font-size: 11px; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; }
+
+  /* Stats row */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r2); padding: 18px 20px; }
+  .stat-label { font-family: var(--font-mono); font-size: 10px; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; }
+  .stat-value { font-family: var(--font-head); font-size: 30px; font-weight: 700; color: var(--text); margin: 4px 0 2px; letter-spacing: -1px; }
+  .stat-sub { font-size: 11px; color: var(--text3); }
+
+  /* Ask panel */
+  .ask-grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; margin-bottom: 28px; }
+  .question-area { position: relative; }
+  textarea { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r); color: var(--text); font-family: var(--font-body); font-size: 14px; line-height: 1.6; padding: 14px 16px; resize: vertical; min-height: 120px; outline: none; transition: border-color 0.2s; }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: var(--text3); }
+  .ask-controls { display: grid; gap: 12px; }
+  .control-group label { display: block; font-family: var(--font-mono); font-size: 10px; color: var(--text3); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 6px; }
+  select { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r); color: var(--text); font-family: var(--font-mono); font-size: 12px; padding: 8px 12px; outline: none; cursor: pointer; transition: border-color 0.2s; appearance: none; }
+  select:focus { border-color: var(--accent); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 20px; border-radius: var(--r); border: none; cursor: pointer; font-family: var(--font-head); font-size: 13px; font-weight: 600; letter-spacing: 0.02em; transition: all 0.15s; width: 100%; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-ghost { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--border2); color: var(--text); }
+
+  /* Spinner */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
+
+  /* Result panel */
+  .result-panel { display: none; }
+  .result-panel.visible { display: block; }
+  .result-answer { background: var(--bg3); border: 1px solid var(--border2); border-left: 3px solid var(--accent); border-radius: var(--r); padding: 16px 18px; margin-bottom: 16px; }
+  .result-answer-label { font-family: var(--font-mono); font-size: 10px; color: var(--accent2); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
+  .result-answer-text { font-size: 15px; color: var(--text); font-weight: 400; line-height: 1.7; }
+  .result-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-family: var(--font-mono); font-size: 11px; font-weight: 500; }
+  .badge-easy { background: rgba(74,222,128,0.12); color: var(--easy); }
+  .badge-medium { background: rgba(251,191,36,0.12); color: var(--medium); }
+  .badge-hard { background: rgba(248,113,113,0.12); color: var(--hard); }
+  .badge-greedy { background: rgba(96,165,250,0.12); color: var(--greedy); }
+  .badge-beam { background: rgba(167,139,250,0.12); color: var(--beam); }
+  .badge-diverse { background: rgba(244,114,182,0.12); color: var(--diverse); }
+  .badge-neutral { background: var(--bg4); color: var(--text2); }
+  .badge-correct { background: rgba(74,222,128,0.12); color: var(--green); }
+  .badge-wrong { background: rgba(248,113,113,0.12); color: var(--coral); }
+
+  /* Paths grid */
+  .paths-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .path-card { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r); padding: 14px; cursor: pointer; transition: all 0.15s; }
+  .path-card:hover { border-color: var(--border2); background: var(--bg4); }
+  .path-card.winner { border-color: var(--accent); }
+  .path-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .path-id { font-family: var(--font-mono); font-size: 10px; color: var(--text3); }
+  .score-bar-wrap { height: 4px; background: var(--bg); border-radius: 2px; overflow: hidden; margin-bottom: 8px; }
+  .score-bar { height: 100%; border-radius: 2px; background: var(--accent); transition: width 0.5s ease; }
+  .path-answer { font-size: 12px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .path-cot { font-family: var(--font-mono); font-size: 11px; color: var(--text3); margin-top: 8px; display: none; border-top: 1px solid var(--border); padding-top: 8px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  .path-card.expanded .path-cot { display: block; }
+  .path-tokens { font-family: var(--font-mono); font-size: 10px; color: var(--text3); margin-top: 4px; }
+
+  /* Score dial */
+  .score-dial { display: flex; align-items: center; gap: 6px; }
+  .dial-value { font-family: var(--font-mono); font-size: 12px; font-weight: 500; }
+
+  /* Divider */
+  hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+  /* History table */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { font-family: var(--font-mono); font-size: 10px; color: var(--text3); letter-spacing: 0.07em; text-transform: uppercase; padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; color: var(--text2); max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  tr:hover td { background: rgba(255,255,255,0.02); color: var(--text); }
+  .mono { font-family: var(--font-mono); }
+
+  /* Analytics */
+  .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+  .tier-grid { display: grid; gap: 10px; }
+  .tier-row { display: grid; grid-template-columns: 160px 1fr 80px 80px 80px; align-items: center; gap: 12px; padding: 10px 14px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r); }
+  .tier-name { font-family: var(--font-mono); font-size: 11px; color: var(--text2); }
+  .acc-bar-wrap { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+  .acc-bar { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+  .acc-high { background: var(--green); }
+  .acc-mid { background: var(--amber); }
+  .acc-low { background: var(--coral); }
+  .tier-stat { font-family: var(--font-mono); font-size: 11px; color: var(--text3); text-align: right; }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 60px 20px; color: var(--text3); font-family: var(--font-mono); font-size: 12px; }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.3; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--r); padding: 12px 16px; font-size: 12px; font-family: var(--font-mono); color: var(--text2); z-index: 9999; transition: all 0.3s; opacity: 0; transform: translateY(8px); pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* Pipeline viz */
+  .pipeline { display: flex; align-items: center; gap: 0; margin-bottom: 28px; flex-wrap: wrap; }
+  .pipe-node { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; font-family: var(--font-mono); font-size: 11px; color: var(--text3); display: flex; align-items: center; gap: 6px; }
+  .pipe-node.active-node { border-color: var(--accent); color: var(--accent2); background: rgba(124,109,250,0.08); }
+  .pipe-node.done-node { border-color: rgba(74,222,128,0.3); color: var(--green); background: rgba(74,222,128,0.05); }
+  .pipe-arrow { color: var(--text3); padding: 0 6px; font-size: 16px; }
+  .pipe-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .pipe-node.active-node .pipe-dot { animation: pulse 1s infinite; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 2px; }
+
+  /* Responsive collapse */
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { position: static; height: auto; flex-direction: row; flex-wrap: wrap; padding: 12px; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .ask-grid { grid-template-columns: 1fr; }
+    .analytics-grid { grid-template-columns: 1fr; }
+    .tier-row { grid-template-columns: 1fr 1fr 60px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark"><span class="dot"></span>ORACLE</div>
+      <div class="logo-sub">Adaptive Reasoning Engine v1.0</div>
+    </div>
+
+    <div class="nav-section">Engine</div>
+    <div class="nav-item active" data-page="ask">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/>
+      </svg>
+      Ask a Question
+    </div>
+    <div class="nav-item" data-page="history">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="2" y="3" width="12" height="10" rx="2"/><path d="M5 7h6M5 10h4"/>
+      </svg>
+      Query History
+    </div>
+
+    <div class="nav-section">Analysis</div>
+    <div class="nav-item" data-page="analytics">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M2 12l4-4 3 3 5-6"/>
+      </svg>
+      Benchmark Stats
+    </div>
+    <div class="nav-item" data-page="calibrate">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="8" cy="8" r="2"/><path d="M8 2v2M8 12v2M2 8h2M12 8h2"/>
+      </svg>
+      Recalibrate
+    </div>
+
+    <div class="nav-section">System</div>
+    <div class="nav-item" data-page="about">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="8" cy="8" r="6"/><path d="M8 7v5M8 5.5v.5"/>
+      </svg>
+      Architecture
+    </div>
+
+    <div class="sidebar-footer">
+      <span class="status-dot" id="api-dot"></span>
+      <span class="status-text" id="api-status">checking…</span>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main">
+
+    <!-- ══════════════════ ASK PAGE ══════════════════ -->
+    <div class="page active" id="page-ask">
+      <div class="page-header">
+        <div class="page-title">Ask a Question</div>
+        <div class="page-sub">ORACLE will classify difficulty, select a strategy, and reason to an answer</div>
+      </div>
+
+      <!-- Pipeline status bar -->
+      <div class="pipeline" id="pipeline">
+        <div class="pipe-node" id="pipe-est"><span class="pipe-dot"></span>Estimator</div>
+        <div class="pipe-arrow">›</div>
+        <div class="pipe-node" id="pipe-sel"><span class="pipe-dot"></span>Strategy</div>
+        <div class="pipe-arrow">›</div>
+        <div class="pipe-node" id="pipe-gen"><span class="pipe-dot"></span>Generator</div>
+        <div class="pipe-arrow">›</div>
+        <div class="pipe-node" id="pipe-ver"><span class="pipe-dot"></span>Verifier</div>
+        <div class="pipe-arrow">›</div>
+        <div class="pipe-node" id="pipe-agg"><span class="pipe-dot"></span>Aggregator</div>
+      </div>
+
+      <div class="ask-grid">
+        <div class="question-area">
+          <textarea id="question-input" placeholder="Enter your question…&#10;&#10;Try multi-hop: 'Which country has the capital that is also the largest city and was founded before 1600?'&#10;Or arithmetic: 'If a train travels 120km/h for 2.5 hours then 80km/h for 1.5 hours, what is the total distance?'"></textarea>
+          <div style="margin-top:10px; display:flex; gap:8px;">
+            <textarea id="context-input" placeholder="Optional context / document…" style="min-height:60px; flex:1;"></textarea>
+            <textarea id="ground-truth-input" placeholder="Ground truth (optional, for eval)" style="min-height:60px; flex:1;"></textarea>
+          </div>
+        </div>
+        <div class="ask-controls">
+          <div class="control-group">
+            <label>Force Difficulty</label>
+            <select id="force-difficulty">
+              <option value="">Auto-detect</option>
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label>Force Strategy</label>
+            <select id="force-strategy">
+              <option value="">Auto-select</option>
+              <option value="greedy">Greedy (1 path)</option>
+              <option value="beam">Beam Search</option>
+              <option value="diverse">Diverse Sampling</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label>Token Budget</label>
+            <select id="budget-tokens">
+              <option value="">No limit</option>
+              <option value="2000">2,000 tokens</option>
+              <option value="5000">5,000 tokens</option>
+              <option value="10000">10,000 tokens</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="ask-btn" onclick="runOracle()">
+            <span id="ask-btn-text">Run ORACLE</span>
+            <span id="ask-spinner" class="spinner" style="display:none"></span>
+          </button>
+          <button class="btn btn-ghost" onclick="clearAll()">Clear</button>
+        </div>
+      </div>
+
+      <!-- Result -->
+      <div class="result-panel" id="result-panel">
+        <div class="result-answer" id="result-answer-box">
+          <div class="result-answer-label">Final Answer</div>
+          <div class="result-answer-text" id="result-answer-text"></div>
+        </div>
+        <div class="result-meta" id="result-meta"></div>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title">Reasoning Paths — click to expand chain of thought</div>
+          <div class="paths-grid" id="paths-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ HISTORY PAGE ══════════════════ -->
+    <div class="page" id="page-history">
+      <div class="page-header">
+        <div class="page-title">Query History</div>
+        <div class="page-sub">Last 50 queries — live from oracle_benchmark.jsonl</div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th><th>Question</th><th>Difficulty</th>
+                <th>Strategy</th><th>Paths</th><th>Tokens</th>
+                <th>Latency</th><th>Verifier</th><th>Correct</th>
+              </tr>
+            </thead>
+            <tbody id="history-body"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="history-empty" style="display:none">
+          <div class="empty-icon">∅</div>
+          No queries yet — ask something first
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ ANALYTICS PAGE ══════════════════ -->
+    <div class="page" id="page-analytics">
+      <div class="page-header">
+        <div class="page-title">Benchmark Statistics</div>
+        <div class="page-sub">Accuracy, token cost, and latency per difficulty × question-type tier</div>
+      </div>
+
+      <div class="stats-row" id="analytics-stats-row">
+        <div class="stat-card"><div class="stat-label">Total Queries</div><div class="stat-value" id="a-total">—</div></div>
+        <div class="stat-card"><div class="stat-label">Overall Accuracy</div><div class="stat-value" id="a-acc">—</div></div>
+        <div class="stat-card"><div class="stat-label">Avg Tokens</div><div class="stat-value" id="a-tokens">—</div></div>
+        <div class="stat-card"><div class="stat-label">Avg Latency</div><div class="stat-value" id="a-latency">—</div></div>
+      </div>
+
+      <div class="analytics-grid">
+        <div class="card">
+          <div class="card-title">Accuracy by Tier</div>
+          <div class="tier-grid" id="tier-accuracy"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Token Cost by Tier</div>
+          <div class="tier-grid" id="tier-tokens"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Strategy Distribution</div>
+        <div id="strategy-dist" style="display:flex; gap:24px; flex-wrap:wrap; padding:8px 0;"></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ CALIBRATE PAGE ══════════════════ -->
+    <div class="page" id="page-calibrate">
+      <div class="page-header">
+        <div class="page-title">Recalibration Loop</div>
+        <div class="page-sub">Adjusts beam_width and temperature based on accuracy-vs-cost data</div>
+      </div>
+      <div style="max-width:600px;">
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-title">How It Works</div>
+          <p style="color:var(--text2); font-size:13px; line-height:1.8;">
+            ORACLE analyses accuracy per tier against token cost. If a tier's accuracy is below 70%, beam width increases. If above 92%, it decreases to save compute. Excessively long responses trigger a temperature reduction to focus the generator.
+          </p>
+          <br>
+          <p style="font-family: var(--font-mono); font-size:12px; color:var(--text3);">
+            Rules:<br>
+            • accuracy &lt; 0.70 → beam_width + 2<br>
+            • accuracy &gt; 0.92 → beam_width − 1<br>
+            • avg_tokens &gt; 1500 → temperature − 0.1
+          </p>
+        </div>
+        <button class="btn btn-primary" style="max-width:240px;" onclick="runRecalibrate()" id="cal-btn">
+          <span id="cal-btn-text">Run Recalibration</span>
+          <span id="cal-spinner" class="spinner" style="display:none"></span>
+        </button>
+        <div id="cal-result" style="margin-top:20px; display:none;">
+          <div class="card">
+            <div class="card-title">Applied Adjustments</div>
+            <pre id="cal-output" style="font-family:var(--font-mono); font-size:12px; color:var(--text2); white-space:pre-wrap; line-height:1.8;"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ ABOUT PAGE ══════════════════ -->
+    <div class="page" id="page-about">
+      <div class="page-header">
+        <div class="page-title">System Architecture</div>
+        <div class="page-sub">ORACLE — Outcome-Ranked Adaptive Cognitive Logic Engine</div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; max-width:900px;">
+        <div class="card">
+          <div class="card-title">01 · Difficulty Estimator</div>
+          <p style="color:var(--text2); font-size:13px; line-height:1.8;">Heuristic feature extraction: word count, clause depth, negation count, multi-hop signal density, named entity count. Assigns a raw score mapped to Easy / Medium / Hard tiers. O(1), no API call.</p>
+        </div>
+        <div class="card">
+          <div class="card-title">02 · Strategy Selector</div>
+          <p style="color:var(--text2); font-size:13px; line-height:1.8;">Looks up a (difficulty × question_type) table to retrieve beam_width, temperature, CoT depth, and verification flags. Supports live override via the recalibration loop.</p>
+        </div>
+        <div class="card">
+          <div class="card-title">03 · CoT Generator</div>
+          <p style="color:var(--text2); font-size:13px; line-height:1.8;">Fires k independent API samples with slightly varying temperature for diversity. Parses each into a (chain_of_thought, final_answer) pair. Assigns a proxy logprob via output-length normalisation.</p>
+        </div>
+        <div class="card">
+          <div class="card-title">04 · Verifier Model</div>
+          <p style="color:var(--text2); font-size:13px; line-height:1.8;">Separate LLM call evaluating (question, CoT, answer) on logical coherence, faithfulness, plausibility, and completeness. Returns a 0–1 JSON score. Acts as a process reward model.</p>
+        </div>
+        <div class="card">
+          <div class="card-title">05 · Self-Consistency Aggregator</div>
+          <p style="color:var(--text2); font-size:13px; line-height:1.8;">Clusters answers by normalised string equality (or numeric tolerance). Each cluster's weight = Σ composite_scores. Winning cluster's best path is returned.</p>
+        </div>
+        <div class="card">
+          <div class="card-title">06 · Benchmark Logger</div>
+          <p style="color:var(--text2); font-size:13px; line-height:1.8;">Appends every QueryRecord to a JSONL file. Computes accuracy, avg tokens, latency per tier. Feeds the recalibration loop that adjusts the strategy table dynamically.</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'http://localhost:8000';
+
+// ── Navigation ──────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    item.classList.add('active');
+    document.getElementById('page-' + item.dataset.page).classList.add('active');
+    if (item.dataset.page === 'history') loadHistory();
+    if (item.dataset.page === 'analytics') loadAnalytics();
+  });
+});
+
+// ── API Health ───────────────────────────────────────────────────────────────
+async function checkHealth() {
+  try {
+    const r = await fetch(API + '/health', {signal: AbortSignal.timeout(3000)});
+    const dot = document.getElementById('api-dot');
+    const txt = document.getElementById('api-status');
+    if (r.ok) {
+      dot.classList.remove('offline');
+      txt.textContent = 'API connected';
+    } else { throw new Error(); }
+  } catch {
+    document.getElementById('api-dot').classList.add('offline');
+    document.getElementById('api-status').textContent = 'API offline';
+  }
+}
+checkHealth();
+setInterval(checkHealth, 15000);
+
+// ── Pipeline animation ───────────────────────────────────────────────────────
+const PIPE_NODES = ['pipe-est','pipe-sel','pipe-gen','pipe-ver','pipe-agg'];
+function resetPipeline() {
+  PIPE_NODES.forEach(id => {
+    const el = document.getElementById(id);
+    el.className = 'pipe-node';
+  });
+}
+function activatePipe(index) {
+  for (let i = 0; i < PIPE_NODES.length; i++) {
+    const el = document.getElementById(PIPE_NODES[i]);
+    if (i < index) el.className = 'pipe-node done-node';
+    else if (i === index) el.className = 'pipe-node active-node';
+    else el.className = 'pipe-node';
+  }
+}
+function completePipeline() {
+  PIPE_NODES.forEach(id => {
+    document.getElementById(id).className = 'pipe-node done-node';
+  });
+}
+
+// ── Ask ──────────────────────────────────────────────────────────────────────
+async function runOracle() {
+  const question = document.getElementById('question-input').value.trim();
+  if (!question) { toast('Enter a question first'); return; }
+
+  const btn = document.getElementById('ask-btn');
+  const btnText = document.getElementById('ask-btn-text');
+  const spinner = document.getElementById('ask-spinner');
+  btn.disabled = true;
+  btnText.style.display = 'none';
+  spinner.style.display = 'block';
+
+  document.getElementById('result-panel').classList.remove('visible');
+  resetPipeline();
+  activatePipe(0);
+
+  const body = {
+    question,
+    context: document.getElementById('context-input').value.trim() || null,
+    ground_truth: document.getElementById('ground-truth-input').value.trim() || null,
+    force_difficulty: document.getElementById('force-difficulty').value || null,
+    force_strategy: document.getElementById('force-strategy').value || null,
+    budget_tokens: document.getElementById('budget-tokens').value ? parseInt(document.getElementById('budget-tokens').value) : null,
+  };
+
+  // Simulate pipeline stages with timing
+  const stageDelay = 600;
+  const timer1 = setTimeout(() => activatePipe(1), stageDelay);
+  const timer2 = setTimeout(() => activatePipe(2), stageDelay * 2);
+  const timer3 = setTimeout(() => activatePipe(3), stageDelay * 3.5);
+  const timer4 = setTimeout(() => activatePipe(4), stageDelay * 4.5);
+
+  try {
+    const resp = await fetch(API + '/ask', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    [timer1,timer2,timer3,timer4].forEach(clearTimeout);
+
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.detail || 'API error');
+    }
+    const data = await resp.json();
+    completePipeline();
+    renderResult(data);
+  } catch (e) {
+    [timer1,timer2,timer3,timer4].forEach(clearTimeout);
+    resetPipeline();
+    toast('Error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btnText.style.display = 'inline';
+    spinner.style.display = 'none';
+  }
+}
+
+function renderResult(data) {
+  document.getElementById('result-answer-text').textContent = data.final_answer;
+
+  // Meta badges
+  const meta = document.getElementById('result-meta');
+  const correct = data.is_correct === true ? 'correct' : data.is_correct === false ? 'wrong' : null;
+  meta.innerHTML = `
+    <span class="badge badge-${data.difficulty}">${data.difficulty.toUpperCase()}</span>
+    <span class="badge badge-${data.strategy_used}">${data.strategy_used} · beam=${data.beam_width}</span>
+    <span class="badge badge-neutral">${data.question_type.replace('_',' ')}</span>
+    <span class="badge badge-neutral">temp ${data.temperature.toFixed(2)}</span>
+    <span class="badge badge-neutral">${data.total_tokens.toLocaleString()} tokens</span>
+    <span class="badge badge-neutral">${(data.total_latency_ms/1000).toFixed(1)}s</span>
+    <span class="badge badge-neutral">avg verifier ${data.avg_verifier_score.toFixed(2)}</span>
+    ${correct ? `<span class="badge badge-${correct}">${correct === 'correct' ? '✓ Correct' : '✗ Wrong'}</span>` : ''}
+  `;
+
+  // Paths
+  const grid = document.getElementById('paths-grid');
+  grid.innerHTML = '';
+  const winnerPath = data.winning_path ? data.winning_path.path_id : (data.paths[0] ? data.paths[0].path_id : null);
+
+  data.paths.forEach((p, i) => {
+    const isWinner = p.path_id === winnerPath;
+    const scorePercent = Math.round(p.verifier_score * 100);
+    const barColor = p.verifier_score >= 0.7 ? 'var(--green)' : p.verifier_score >= 0.4 ? 'var(--amber)' : 'var(--coral)';
+    const div = document.createElement('div');
+    div.className = 'path-card' + (isWinner ? ' winner' : '');
+    div.innerHTML = `
+      <div class="path-header">
+        <span class="path-id">#${p.path_id}${isWinner ? ' ★' : ''}</span>
+        <span class="score-dial">
+          <span class="dial-value" style="color:${barColor}">${scorePercent}%</span>
+        </span>
+      </div>
+      <div class="score-bar-wrap"><div class="score-bar" style="width:${scorePercent}%; background:${barColor}"></div></div>
+      <div class="path-answer">${p.final_answer}</div>
+      <div class="path-tokens">${p.tokens_used} tokens · ${p.generation_time_ms.toFixed(0)}ms · composite ${p.composite_score.toFixed(3)}</div>
+      <div class="path-cot">${p.chain_of_thought || '(no chain of thought)'}</div>
+    `;
+    div.addEventListener('click', () => div.classList.toggle('expanded'));
+    grid.appendChild(div);
+  });
+
+  document.getElementById('result-panel').classList.add('visible');
+}
+
+function clearAll() {
+  document.getElementById('question-input').value = '';
+  document.getElementById('context-input').value = '';
+  document.getElementById('ground-truth-input').value = '';
+  document.getElementById('result-panel').classList.remove('visible');
+  resetPipeline();
+}
+
+// Enter key submit
+document.getElementById('question-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.metaKey) runOracle();
+});
+
+// ── History ──────────────────────────────────────────────────────────────────
+async function loadHistory() {
+  try {
+    const resp = await fetch(API + '/recent?n=50');
+    const records = await resp.json();
+    const tbody = document.getElementById('history-body');
+    const empty = document.getElementById('history-empty');
+    tbody.innerHTML = '';
+    if (!records.length) { empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+    records.forEach(r => {
+      const d = new Date(r.timestamp * 1000);
+      const correct = r.is_correct === true ? '<span class="badge badge-correct" style="font-size:10px;padding:2px 8px">✓</span>'
+                    : r.is_correct === false ? '<span class="badge badge-wrong" style="font-size:10px;padding:2px 8px">✗</span>' : '—';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="mono" style="white-space:nowrap;font-size:11px;">${d.toLocaleTimeString()}</td>
+        <td style="max-width:240px">${r.question}</td>
+        <td><span class="badge badge-${r.difficulty}" style="font-size:10px;padding:2px 8px">${r.difficulty}</span></td>
+        <td><span class="badge badge-${r.strategy_used}" style="font-size:10px;padding:2px 8px">${r.strategy_used}</span></td>
+        <td class="mono">${r.num_paths}</td>
+        <td class="mono">${r.total_tokens.toLocaleString()}</td>
+        <td class="mono">${(r.total_latency_ms/1000).toFixed(1)}s</td>
+        <td class="mono">${r.avg_verifier_score.toFixed(2)}</td>
+        <td>${correct}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch { toast('Could not load history'); }
+}
+
+// ── Analytics ────────────────────────────────────────────────────────────────
+async function loadAnalytics() {
+  try {
+    const [statsResp, tierResp] = await Promise.all([
+      fetch(API + '/stats'),
+      fetch(API + '/tier-stats'),
+    ]);
+    const stats = await statsResp.json();
+    const tiers = await tierResp.json();
+
+    document.getElementById('a-total').textContent = stats.total_queries || '—';
+    document.getElementById('a-acc').textContent = stats.overall_accuracy ? (stats.overall_accuracy * 100).toFixed(0) + '%' : '—';
+    document.getElementById('a-tokens').textContent = stats.total_tokens_used ? (stats.total_tokens_used/1000).toFixed(1)+'k' : '—';
+    document.getElementById('a-latency').textContent = stats.avg_latency_ms ? stats.avg_latency_ms.toFixed(0)+'ms' : '—';
+
+    // Tier accuracy
+    const accEl = document.getElementById('tier-accuracy');
+    const tokEl = document.getElementById('tier-tokens');
+    accEl.innerHTML = ''; tokEl.innerHTML = '';
+    const tierKeys = Object.keys(tiers).sort();
+    if (!tierKeys.length) {
+      accEl.innerHTML = '<div class="empty">No data yet</div>';
+      tokEl.innerHTML = '<div class="empty">No data yet</div>';
+    }
+    tierKeys.forEach(key => {
+      const t = tiers[key];
+      const acc = t.accuracy * 100;
+      const cls = acc >= 80 ? 'acc-high' : acc >= 60 ? 'acc-mid' : 'acc-low';
+      const maxTokens = 2000;
+      const tokPct = Math.min(100, (t.avg_tokens / maxTokens) * 100);
+      accEl.innerHTML += `
+        <div class="tier-row">
+          <div class="tier-name">${key.replace('_',' ')}</div>
+          <div class="acc-bar-wrap"><div class="acc-bar ${cls}" style="width:${acc}%"></div></div>
+          <div class="tier-stat">${acc.toFixed(0)}%</div>
+          <div class="tier-stat" style="color:var(--text3)">${t.total}q</div>
+          <div class="tier-stat" style="color:var(--text3)">${t.avg_verifier_score.toFixed(2)}</div>
+        </div>`;
+      tokEl.innerHTML += `
+        <div class="tier-row">
+          <div class="tier-name">${key.replace('_',' ')}</div>
+          <div class="acc-bar-wrap"><div class="acc-bar" style="width:${tokPct}%;background:var(--accent)"></div></div>
+          <div class="tier-stat">${t.avg_tokens.toFixed(0)}</div>
+          <div class="tier-stat" style="color:var(--text3)">${(t.avg_latency_ms/1000).toFixed(1)}s</div>
+          <div class="tier-stat" style="color:var(--text3)">${t.cost_efficiency.toFixed(2)}eff</div>
+        </div>`;
+    });
+
+    // Strategy dist
+    const sd = document.getElementById('strategy-dist');
+    sd.innerHTML = '';
+    if (stats.strategy_breakdown) {
+      Object.entries(stats.strategy_breakdown).forEach(([k, v]) => {
+        sd.innerHTML += `<div style="text-align:center">
+          <div style="font-family:var(--font-head);font-size:28px;font-weight:700;color:var(--text)">${v}</div>
+          <div class="badge badge-${k}" style="margin-top:4px">${k}</div>
+        </div>`;
+      });
+    }
+  } catch { toast('Could not load analytics'); }
+}
+
+// ── Recalibrate ───────────────────────────────────────────────────────────────
+async function runRecalibrate() {
+  const btn = document.getElementById('cal-btn');
+  const txt = document.getElementById('cal-btn-text');
+  const sp = document.getElementById('cal-spinner');
+  btn.disabled = true; txt.style.display = 'none'; sp.style.display = 'block';
+  try {
+    const resp = await fetch(API + '/recalibrate', {method:'POST'});
+    const data = await resp.json();
+    const out = document.getElementById('cal-output');
+    const box = document.getElementById('cal-result');
+    if (Object.keys(data.adjustments).length === 0) {
+      out.textContent = 'No adjustments needed — all tiers within targets.';
+    } else {
+      out.textContent = JSON.stringify(data.adjustments, null, 2);
+    }
+    box.style.display = 'block';
+    toast(data.message);
+  } catch { toast('Recalibration failed'); }
+  finally { btn.disabled = false; txt.style.display = 'inline'; sp.style.display = 'none'; }
+}
+
+// ── Toast ────────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
