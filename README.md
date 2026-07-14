@@ -1,5 +1,5 @@
-# O.R.A.C.L.E.[README.md](https://github.com/user-attachments/files/26163852/README.md)
-# ORACLE
+
+# RouteVerify
 ### Outcome-Ranked Adaptive Cognitive Logic Engine
 
 A production-grade reasoning system that classifies question difficulty, selects an optimal generation strategy, produces multiple chain-of-thought candidates, scores them with a verifier model, and aggregates to the best answer — with a live recalibration loop.
